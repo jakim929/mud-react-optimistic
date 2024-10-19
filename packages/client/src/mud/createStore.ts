@@ -155,5 +155,23 @@ export function createStore<tables extends Tables>(
     ): TableRecord<table>['value'] | undefined => {
       return get().getRecord(table, key)?.value
     },
+
+    addPendingLogs: (logs: StoreEventsLog[]) => {
+      const pendingLogs = get().pendingLogs
+      logs.forEach((log) => {
+        pendingLogs.set(getId(log.args), log)
+      })
+      set({ pendingLogs })
+    },
+
+    removePendingLogsForTxHash: (hash: Hex) => {
+      const pendingLogs = get().pendingLogs
+      const updatedLogs = new Map(
+        Array.from(pendingLogs.entries()).filter(
+          ([, log]) => log.transactionHash !== hash,
+        ),
+      )
+      set({ pendingLogs: updatedLogs })
+    },
   }))
 }
