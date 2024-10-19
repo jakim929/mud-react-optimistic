@@ -41,15 +41,15 @@ function convertToTableRecord(rawRecord: RawRecord, table: Table): TableRecord {
   } satisfies TableRecord
 }
 
-export const applyLogsToSingleRecord = ({
+export const applyLogsToSingleRecord = <TTable extends Table>({
   existingRawRecord,
   table,
   logs,
 }: {
   existingRawRecord?: RawRecord
-  table: Table
+  table: TTable
   logs: StoreEventsLog[] // assumes these are all for the same record
-}): TableRecord | null => {
+}): TableRecord<TTable> | null => {
   const id = getId(logs[0].args)
   const tableId = logs[0].args.tableId
   const keyTuple = logs[0].args.keyTuple
