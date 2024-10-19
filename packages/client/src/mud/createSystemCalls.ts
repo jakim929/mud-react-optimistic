@@ -66,7 +66,7 @@ export function createSystemCalls(
     waitForTransaction,
 
     memoryClient,
-    storageAdapter,
+    // storageAdapter,
   }: SetupNetworkResult,
 ) {
   const applyToStore = async (logs: Log[]) => {
@@ -76,8 +76,10 @@ export function createSystemCalls(
       logs,
     })
 
+    useStore.getState().addPendingLogs(parsedLogs)
+
     // @ts-ignore
-    await storageAdapter({ logs: parsedLogs })
+    // await storageAdapter({ logs: parsedLogs })
   }
 
   const addTask = async (label: string) => {

@@ -6,17 +6,16 @@ import {
   SyncStep,
   configToTables,
 } from '@latticexyz/store-sync'
-import {
-  ZustandStore,
-  createStore,
-  createStorageAdapter,
-} from '@latticexyz/store-sync/zustand'
+import { createStorageAdapter } from '@latticexyz/store-sync/zustand'
 import { createStoreSync } from '@latticexyz/store-sync'
 import { Address } from 'viem'
 import { Store as StoreConfig } from '@latticexyz/store'
 import { Tables } from '@latticexyz/config'
 import { merge } from '@ark/util'
-import { createStoreOptimistic } from './createStoreOptimistic'
+import {
+  createStoreOptimistic,
+  ZustandStoreOptimistic,
+} from './createStoreOptimistic'
 
 export type SyncToZustandOptions<
   config extends StoreConfig,
@@ -26,7 +25,7 @@ export type SyncToZustandOptions<
   address: Address
   config: config
   tables?: extraTables
-  store?: ZustandStore<
+  store?: ZustandStoreOptimistic<
     merge<merge<configToTables<config>, extraTables>, mudTables>
   >
   startSync?: boolean
@@ -37,7 +36,7 @@ export type SyncToZustandResult<
   extraTables extends Tables,
 > = SyncResult & {
   tables: merge<merge<configToTables<config>, extraTables>, mudTables>
-  useStore: ZustandStore<
+  useStore: ZustandStoreOptimistic<
     merge<merge<configToTables<config>, extraTables>, mudTables>
   >
   stopSync: () => void
@@ -61,6 +60,8 @@ export async function syncToZustandOptimistic<
     ...mudTables,
   } as unknown as merge<merge<configToTables<config>, extraTables>, mudTables>
   const useStore = store ?? createStoreOptimistic({ tables })
+
+  // This adapter writes to canonical (latest) state
   const storageAdapter = createStorageAdapter({ store: useStore })
 
   const storeSync = await createStoreSync({

@@ -7,7 +7,8 @@ import {
 } from '@latticexyz/protocol-parser/internal'
 import { Table, Tables } from '@latticexyz/config'
 import { getId, RawRecord } from '@latticexyz/store-sync/zustand'
-import { StoreEventsLog, SyncStep, TableRecord } from '@latticexyz/store-sync'
+import { StoreEventsLog, SyncStep } from '@latticexyz/store-sync'
+import { TableRecord } from '@latticexyz/store-sync/zustand'
 import { applyLogsToSingleRecord } from './applyLogsToSingleRecord'
 
 type TableRecords<table extends Table> = {
@@ -90,7 +91,6 @@ export function createStoreOptimistic<tables extends Tables>(
       console.log('might blow up because we are ts expect erroring')
       const records = get().records
       return Object.fromEntries(
-        // @ts-expect-error
         Object.entries(records).filter(
           ([id, record]) => record.table.tableId === table.tableId,
         ),
@@ -170,6 +170,8 @@ export function createStoreOptimistic<tables extends Tables>(
       logs.forEach((log) => {
         pendingLogs.set(getId(log.args), log)
       })
+      console.log('addPendingLogs')
+
       set({ pendingLogs })
     },
 
@@ -180,6 +182,7 @@ export function createStoreOptimistic<tables extends Tables>(
           ([, log]) => log.transactionHash !== hash,
         ),
       )
+      console.log('removePendingLogsForTxHash')
       set({ pendingLogs: updatedLogs })
     },
   }))
