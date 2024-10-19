@@ -4,6 +4,7 @@ import { encodeKey, getKeySchema, getSchemaTypes } from "@latticexyz/protocol-pa
 import { Table, Tables } from "@latticexyz/config";
 import { getId, RawRecord } from "@latticexyz/store-sync/zustand";
 import { StoreEventsLog, SyncStep, TableRecord } from "@latticexyz/store-sync";
+import { applyLogsToSingleRecord } from "./applyLogsToSingleRecord";
 
 type TableRecords<table extends Table> = {
   readonly [id: string]: TableRecord<table>;
@@ -73,27 +74,17 @@ export function createStore<tables extends Tables>(opts: CreateStoreOptions<tabl
       ) as unknown as TableRecords<table>;
     },
     getRecord: <table extends Table>(table: table, key: TableRecord<table>["key"]): TableRecord<table> | undefined => {
-      // TODO: update encodeKey to use more recent types
       const keyTuple = encodeKey(getSchemaTypes(getKeySchema(table)) as never, key as never);
       const id = getId({ tableId: table.tableId, keyTuple });
-      return get().pendingLogs.get(id) ?? get().records[id] as unknown as TableRecord<table> | undefined;
+      return get().records[id] as unknown as TableRecord<table> | undefined;
     },
     getRecordOptimistic: <table extends Table>(table: table, key: TableRecord<table>["key"]): TableRecord<table> | undefined => {
       const keyTuple = encodeKey(getSchemaTypes(getKeySchema(table)) as never, key as never);
-      const recordId = getId({ tableId: table.tableId, keyTuple })
-        ;[...get().pendingLogs.entries()].find(([]))
-
-
       const id = getId({ tableId: table.tableId, keyTuple });
       const log = get().pendingLogs.get(id)
-      if (log) {
-        // const logAsRecord: TableRecord<table> = 
-        if (log.eventName === ) {
-
-        }
-
-      }
-      return as unknown as TableRecord<table> | undefined;
+      const existingRawRecord = get().rawRecords[id]
+      const tableRecord = log && applyLogsToSingleRecord<table>({ existingRawRecord, table, logs: [log] })
+      return tableRecord ?? get().records[id] as unknown as TableRecord<table> | undefined;
     },
     getValue: <table extends Table>(
       table: table,
