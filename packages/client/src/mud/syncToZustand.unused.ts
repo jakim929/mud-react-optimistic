@@ -1,7 +1,7 @@
 // this is copy pasted from source code for convenience
 import { SyncOptions, SyncResult, mudTables, SyncStep, configToTables } from "@latticexyz/store-sync";
 import { ZustandStore, createStore, createStorageAdapter } from "@latticexyz/store-sync/zustand";
-import { createStoreSync} from "@latticexyz/store-sync";
+import { createStoreSync } from "@latticexyz/store-sync";
 import { Address } from "viem";
 import { Store as StoreConfig } from "@latticexyz/store";
 import { Tables } from "@latticexyz/config";
@@ -35,7 +35,6 @@ export async function syncToZustand<config extends StoreConfig, extraTables exte
     ...mudTables,
   } as unknown as merge<merge<configToTables<config>, extraTables>, mudTables>;
   const useStore = store ?? createStore({ tables });
-  const useStoreOptimistic = createStore({ tables });
   const storageAdapter = createStorageAdapter({ store: useStore });
 
   const storeSync = await createStoreSync({
@@ -55,7 +54,6 @@ export async function syncToZustand<config extends StoreConfig, extraTables exte
 
   return {
     ...storeSync,
-    useStoreOptimistic,
     tables,
     useStore,
     stopSync,
