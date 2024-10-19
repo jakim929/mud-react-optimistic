@@ -151,7 +151,7 @@ export async function setupNetwork() {
     publicClient: publicClient,
     startBlock: BigInt(networkConfig.initialBlockNumber),
   })
-  const optimisticStore = createStore({tables})
+  const optimisticStore = createStore({ tables })
 
   const storageAdapter = createStorageAdapter({ store: useStore })
 

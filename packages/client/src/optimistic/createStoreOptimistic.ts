@@ -16,7 +16,7 @@ type TableRecords<table extends Table> = {
 
 // TODO: split this into distinct stores and combine (https://docs.pmnd.rs/zustand/guides/typescript#slices-pattern)?
 
-export type ZustandState<tables extends Tables> = {
+export type ZustandStateOptimistic<tables extends Tables> = {
   // optimistic state
   readonly pendingLogs: Map<string, StoreEventsLog>
   // cannonical state
@@ -50,20 +50,29 @@ export type ZustandState<tables extends Tables> = {
     table: table,
     key: TableRecord<table>['key'],
   ) => TableRecord<table>['value'] | undefined
+  readonly getRecordsOptimistic: <table extends Table>(
+    table: table,
+  ) => TableRecords<table>
+  readonly getRecordOptimistic: <table extends Table>(
+    table: table,
+    key: TableRecord<table>['key'],
+  ) => TableRecord<table> | undefined
+  readonly addPendingLogs: (logs: StoreEventsLog[]) => void
+  readonly removePendingLogsForTxHash: (hash: Hex) => void
 }
 
-export type ZustandStore<tables extends Tables> = UseBoundStore<
-  StoreApi<ZustandState<tables>>
+export type ZustandStoreOptimistic<tables extends Tables> = UseBoundStore<
+  StoreApi<ZustandStateOptimistic<tables>>
 >
 
-export type CreateStoreOptions<tables extends Tables> = {
+export type CreateStoreOptimisticOptions<tables extends Tables> = {
   tables: tables
 }
 
-export function createStore<tables extends Tables>(
-  opts: CreateStoreOptions<tables>,
-): ZustandStore<tables> {
-  return create<ZustandState<tables>>((set, get) => ({
+export function createStoreOptimistic<tables extends Tables>(
+  opts: CreateStoreOptimisticOptions<tables>,
+): ZustandStoreOptimistic<tables> {
+  return create<ZustandStateOptimistic<tables>>((set, get) => ({
     pendingLogs: new Map(),
     syncProgress: {
       step: SyncStep.INITIALIZE,
