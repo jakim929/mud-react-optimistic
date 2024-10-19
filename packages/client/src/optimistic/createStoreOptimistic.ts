@@ -19,7 +19,7 @@ type TableRecords<table extends Table> = {
 
 export type ZustandStateOptimistic<tables extends Tables> = {
   // optimistic state
-  readonly pendingLogs: Map<string, StoreEventsLog>
+  readonly pendingLogs: Map<string, StoreEventsLog[]>
   // cannonical state
   readonly syncProgress: {
     readonly step: SyncStep
@@ -48,6 +48,10 @@ export type ZustandStateOptimistic<tables extends Tables> = {
     key: TableRecord<table>['key'],
   ) => TableRecord<table> | undefined
   readonly getValue: <table extends Table>(
+    table: table,
+    key: TableRecord<table>['key'],
+  ) => TableRecord<table>['value'] | undefined
+  readonly getValueOptimistic: <table extends Table>(
     table: table,
     key: TableRecord<table>['key'],
   ) => TableRecord<table>['value'] | undefined
@@ -100,18 +104,21 @@ export function createStoreOptimistic<tables extends Tables>(
       table: table,
     ): TableRecords<table> => {
       const rawRecords = get().rawRecords
+      const pendingLogs = get().pendingLogs
 
-      const updatedRecordsEntries = Object.entries(get().pendingLogs).map(
-        ([id, log]) => {
+      const updatedRecordsEntries = Array.from(pendingLogs.entries()).map(
+        ([id, logs]) => {
           const existingRecord = rawRecords[id]
           const updatedRecord = applyLogsToSingleRecord<table>({
             existingRawRecord: existingRecord,
             table,
-            logs: [log],
+            logs,
           })
+
           return [id, updatedRecord]
         },
       )
+
       const updatedRecords = Object.fromEntries(updatedRecordsEntries)
 
       const records = get().records
@@ -122,7 +129,16 @@ export function createStoreOptimistic<tables extends Tables>(
         ),
       ) as unknown as TableRecords<table>
 
-      return { ...existing, ...updatedRecords }
+      const result = { ...existing, ...updatedRecords }
+
+      // Remove entries where updatedRecords has null values
+      Object.keys(updatedRecords).forEach((key) => {
+        if (updatedRecords[key] === null) {
+          delete result[key]
+        }
+      })
+
+      return result
     },
     getRecord: <table extends Table>(
       table: table,
@@ -144,14 +160,14 @@ export function createStoreOptimistic<tables extends Tables>(
         key as never,
       )
       const id = getId({ tableId: table.tableId, keyTuple })
-      const log = get().pendingLogs.get(id)
+      const logs = get().pendingLogs.get(id)
       const existingRawRecord = get().rawRecords[id]
       const tableRecord =
-        log &&
+        logs &&
         applyLogsToSingleRecord<table>({
           existingRawRecord,
           table,
-          logs: [log],
+          logs,
         })
       return (
         tableRecord ??
@@ -165,24 +181,38 @@ export function createStoreOptimistic<tables extends Tables>(
       return get().getRecord(table, key)?.value
     },
 
+    getValueOptimistic: <table extends Table>(
+      table: table,
+      key: TableRecord<table>['key'],
+    ): TableRecord<table>['value'] | undefined => {
+      return get().getRecordOptimistic(table, key)?.value
+    },
+
     addPendingLogs: (logs: StoreEventsLog[]) => {
       const pendingLogs = get().pendingLogs
       logs.forEach((log) => {
-        pendingLogs.set(getId(log.args), log)
+        const id = getId(log.args)
+        if (pendingLogs.has(id)) {
+          pendingLogs.get(id)!.push(log)
+        } else {
+          pendingLogs.set(id, [log])
+        }
       })
-      console.log('addPendingLogs')
-
       set({ pendingLogs })
     },
 
     removePendingLogsForTxHash: (hash: Hex) => {
       const pendingLogs = get().pendingLogs
       const updatedLogs = new Map(
-        Array.from(pendingLogs.entries()).filter(
-          ([, log]) => log.transactionHash !== hash,
-        ),
+        Array.from(pendingLogs.entries())
+          .map(([key, logs]) => {
+            return [
+              key,
+              logs.filter((log) => log.transactionHash !== hash),
+            ] as [string, StoreEventsLog[]]
+          })
+          .filter(([, logs]) => logs.length > 0),
       )
-      console.log('removePendingLogsForTxHash')
       set({ pendingLogs: updatedLogs })
     },
   }))

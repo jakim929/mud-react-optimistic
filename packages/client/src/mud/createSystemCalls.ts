@@ -100,8 +100,8 @@ export function createSystemCalls(
 
   const toggleTask = async (id: Hex) => {
     const isComplete =
-      (useStore.getState().getValue(tables.Tasks, { id })?.completedAt ?? 0n) >
-      0n
+      (useStore.getState().getValueOptimistic(tables.Tasks, { id })
+        ?.completedAt ?? 0n) > 0n
 
     const functionData = encodeFunctionData({
       abi: worldContract.abi,

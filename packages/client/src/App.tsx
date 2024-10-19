@@ -9,7 +9,8 @@ export const App = () => {
   } = useMUD();
 
   const tasks = useStore((state) => {
-    const records = Object.values(state.getRecords(tables.Tasks));
+    const records = Object.values(state.getRecordsOptimistic(tables.Tasks));
+    console.log('records', records)
     records.sort((a, b) => Number(a.value.createdAt - b.value.createdAt));
     return records;
   });
