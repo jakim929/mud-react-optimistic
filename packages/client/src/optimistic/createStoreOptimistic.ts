@@ -7,7 +7,8 @@ import {
 } from '@latticexyz/protocol-parser/internal'
 import { Table, Tables } from '@latticexyz/config'
 import { getId, RawRecord } from '@latticexyz/store-sync/zustand'
-import { StoreEventsLog, SyncStep, TableRecord } from '@latticexyz/store-sync'
+import { StoreEventsLog, SyncStep } from '@latticexyz/store-sync'
+import { TableRecord } from '@latticexyz/store-sync/zustand'
 import { applyLogsToSingleRecord } from './applyLogsToSingleRecord'
 
 type TableRecords<table extends Table> = {
@@ -16,7 +17,7 @@ type TableRecords<table extends Table> = {
 
 // TODO: split this into distinct stores and combine (https://docs.pmnd.rs/zustand/guides/typescript#slices-pattern)?
 
-export type ZustandState<tables extends Tables> = {
+export type ZustandStateOptimistic<tables extends Tables> = {
   // optimistic state
   readonly pendingLogs: Map<string, StoreEventsLog>
   // cannonical state
@@ -50,20 +51,29 @@ export type ZustandState<tables extends Tables> = {
     table: table,
     key: TableRecord<table>['key'],
   ) => TableRecord<table>['value'] | undefined
+  readonly getRecordsOptimistic: <table extends Table>(
+    table: table,
+  ) => TableRecords<table>
+  readonly getRecordOptimistic: <table extends Table>(
+    table: table,
+    key: TableRecord<table>['key'],
+  ) => TableRecord<table> | undefined
+  readonly addPendingLogs: (logs: StoreEventsLog[]) => void
+  readonly removePendingLogsForTxHash: (hash: Hex) => void
 }
 
-export type ZustandStore<tables extends Tables> = UseBoundStore<
-  StoreApi<ZustandState<tables>>
+export type ZustandStoreOptimistic<tables extends Tables> = UseBoundStore<
+  StoreApi<ZustandStateOptimistic<tables>>
 >
 
-export type CreateStoreOptions<tables extends Tables> = {
+export type CreateStoreOptimisticOptions<tables extends Tables> = {
   tables: tables
 }
 
-export function createStore<tables extends Tables>(
-  opts: CreateStoreOptions<tables>,
-): ZustandStore<tables> {
-  return create<ZustandState<tables>>((set, get) => ({
+export function createStoreOptimistic<tables extends Tables>(
+  opts: CreateStoreOptimisticOptions<tables>,
+): ZustandStoreOptimistic<tables> {
+  return create<ZustandStateOptimistic<tables>>((set, get) => ({
     pendingLogs: new Map(),
     syncProgress: {
       step: SyncStep.INITIALIZE,
@@ -81,7 +91,6 @@ export function createStore<tables extends Tables>(
       console.log('might blow up because we are ts expect erroring')
       const records = get().records
       return Object.fromEntries(
-        // @ts-expect-error
         Object.entries(records).filter(
           ([id, record]) => record.table.tableId === table.tableId,
         ),
@@ -161,6 +170,8 @@ export function createStore<tables extends Tables>(
       logs.forEach((log) => {
         pendingLogs.set(getId(log.args), log)
       })
+      console.log('addPendingLogs')
+
       set({ pendingLogs })
     },
 
@@ -171,6 +182,7 @@ export function createStore<tables extends Tables>(
           ([, log]) => log.transactionHash !== hash,
         ),
       )
+      console.log('removePendingLogsForTxHash')
       set({ pendingLogs: updatedLogs })
     },
   }))

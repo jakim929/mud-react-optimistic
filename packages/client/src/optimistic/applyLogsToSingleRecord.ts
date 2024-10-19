@@ -14,13 +14,16 @@ import {
   getValueSchema,
   KeySchema,
 } from '@latticexyz/protocol-parser/internal'
-import { devConsole } from './devConsole'
+import { devConsole } from '../mud/devConsole'
 
 type MutableRawRecord = {
   -readonly [K in keyof RawRecord]: RawRecord[K]
 }
 
-function convertToTableRecord(rawRecord: RawRecord, table: Table): TableRecord {
+function convertToTableRecord<TTable extends Table>(
+  rawRecord: RawRecord,
+  table: TTable,
+): TableRecord<TTable> {
   // TODO: update decodeKey to use more recent types
   const key = decodeKey(
     getSchemaTypes(getKeySchema(table)) as KeySchema,
@@ -39,7 +42,7 @@ function convertToTableRecord(rawRecord: RawRecord, table: Table): TableRecord {
     key,
     value,
     fields: { ...key, ...value },
-  } satisfies TableRecord
+  } satisfies TableRecord<TTable>
 }
 
 export const applyLogsToSingleRecord = <TTable extends Table>({

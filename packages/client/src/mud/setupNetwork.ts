@@ -27,6 +27,7 @@ import { transactionQueue, writeObserver } from '@latticexyz/common/actions'
 import { Subject, share } from 'rxjs'
 import { createMemoryClient } from 'tevm'
 import { createCommon } from 'tevm/common'
+import { syncToZustandOptimistic } from '../optimistic/syncToZustandOptimistic'
 
 /*
  * Import our MUD config, which includes strong types for
@@ -38,7 +39,7 @@ import { createCommon } from 'tevm/common'
  */
 import mudConfig from 'contracts/mud.config'
 import { createStorePrecompile } from '../optimistic/createStorePrecompile'
-import { createStore } from './createStore'
+// import { createStore } from './createStore'
 
 export type SetupNetworkResult = Awaited<ReturnType<typeof setupNetwork>>
 
@@ -145,15 +146,15 @@ export async function setupNetwork() {
     latestBlock$,
     storedBlockLogs$,
     waitForTransaction,
-  } = await syncToZustand({
+  } = await syncToZustandOptimistic({
     config: mudConfig,
     address: networkConfig.worldAddress as Hex,
     publicClient: publicClient,
     startBlock: BigInt(networkConfig.initialBlockNumber),
   })
-  const optimisticStore = createStore({tables})
+  // const optimisticStore = createStore({ tables })
 
-  const storageAdapter = createStorageAdapter({ store: useStore })
+  // const storageAdapter = createStorageAdapter({ store: useStore })
 
   return {
     tables,
@@ -165,7 +166,6 @@ export async function setupNetwork() {
     waitForTransaction,
     worldContract,
     write$: write$.asObservable().pipe(share()),
-    storageAdapter,
     memoryClient,
     storePrecompileAddress,
   }
