@@ -38,6 +38,7 @@ import { createCommon } from 'tevm/common'
  */
 import mudConfig from 'contracts/mud.config'
 import { createStorePrecompile } from '../optimistic/createStorePrecompile'
+import { createStore } from './createStore'
 
 export type SetupNetworkResult = Awaited<ReturnType<typeof setupNetwork>>
 
@@ -150,6 +151,7 @@ export async function setupNetwork() {
     publicClient: publicClient,
     startBlock: BigInt(networkConfig.initialBlockNumber),
   })
+  const optimisticStore = createStore({tables})
 
   const storageAdapter = createStorageAdapter({ store: useStore })
 

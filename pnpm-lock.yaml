@@ -44,15 +44,24 @@ importers:
 
   packages/client:
     dependencies:
+      '@ark/util':
+        specifier: ^0.18.0
+        version: 0.18.0
       '@ethereumjs/util':
         specifier: ^9.1.0
         version: 9.1.0
       '@latticexyz/common':
         specifier: 2.2.11
         version: 2.2.11(@aws-sdk/client-kms@3.675.0)(asn1.js@5.4.1)(bufferutil@4.0.8)(typescript@5.4.2)(utf-8-validate@5.0.10)(zod@3.23.8)
+      '@latticexyz/config':
+        specifier: ^2.2.12
+        version: 2.2.12(@aws-sdk/client-kms@3.675.0)(asn1.js@5.4.1)(bufferutil@4.0.8)(typescript@5.4.2)(utf-8-validate@5.0.10)(zod@3.23.8)
       '@latticexyz/dev-tools':
         specifier: 2.2.11
         version: 2.2.11(@aws-sdk/client-kms@3.675.0)(@latticexyz/common@2.2.11(@aws-sdk/client-kms@3.675.0)(asn1.js@5.4.1)(bufferutil@4.0.8)(typescript@5.4.2)(utf-8-validate@5.0.10)(zod@3.23.8))(@latticexyz/recs@2.2.12(bufferutil@4.0.8)(typescript@5.4.2)(utf-8-validate@5.0.10)(zod@3.23.8))(@latticexyz/store-sync@2.2.11(@aws-sdk/client-kms@3.675.0)(@opentelemetry/api@1.9.0)(@types/react@18.2.22)(asn1.js@5.4.1)(better-sqlite3@8.7.0)(bufferutil@4.0.8)(react@18.3.1)(typescript@5.4.2)(utf-8-validate@5.0.10))(@latticexyz/store@2.2.11(@aws-sdk/client-kms@3.675.0)(asn1.js@5.4.1)(bufferutil@4.0.8)(typescript@5.4.2)(utf-8-validate@5.0.10)(zod@3.23.8))(@latticexyz/utils@2.2.11)(@latticexyz/world@2.2.11(@aws-sdk/client-kms@3.675.0)(asn1.js@5.4.1)(bufferutil@4.0.8)(typescript@5.4.2)(utf-8-validate@5.0.10)(zod@3.23.8))(@types/react@18.2.22)(asn1.js@5.4.1)(bufferutil@4.0.8)(typescript@5.4.2)(utf-8-validate@5.0.10)(zod@3.23.8)
+      '@latticexyz/protocol-parser':
+        specifier: ^2.2.12
+        version: 2.2.12(@aws-sdk/client-kms@3.675.0)(asn1.js@5.4.1)(bufferutil@4.0.8)(typescript@5.4.2)(utf-8-validate@5.0.10)(zod@3.23.8)
       '@latticexyz/react':
         specifier: 2.2.11
         version: 2.2.11(@aws-sdk/client-kms@3.675.0)(asn1.js@5.4.1)(bufferutil@4.0.8)(typescript@5.4.2)(utf-8-validate@5.0.10)(zod@3.23.8)
@@ -89,6 +98,9 @@ importers:
       viem:
         specifier: 2.21.6
         version: 2.21.6(bufferutil@4.0.8)(typescript@5.4.2)(utf-8-validate@5.0.10)(zod@3.23.8)
+      zustand:
+        specifier: ^5.0.0
+        version: 5.0.0(@types/react@18.2.22)(react@18.3.1)(use-sync-external-store@1.2.2(react@18.3.1))
     devDependencies:
       '@types/react':
         specifier: 18.2.22
@@ -169,6 +181,9 @@ packages:
 
   '@ark/schema@0.3.3':
     resolution: {integrity: sha512-SA4QggzaKHxkNB+faWmhSJbCPMHmGBCpb6dNG3VIt5VOMZhZJJSD76/tOUzQvvJNzztHkTakrTZea+iKsEDcRQ==}
+
+  '@ark/util@0.18.0':
+    resolution: {integrity: sha512-TpHY532LKQwwYHui5NN/eO/6eSiSMvf652YNt1BsV7fya7RzXL27IiU9x4bm7jTFZxLQGYDQTB7nw41TqeuF4g==}
 
   '@ark/util@0.2.2':
     resolution: {integrity: sha512-ryZ4+f3SlReQRH9nTFLK5EeU1Pan5ZfS+ACPSk0ir5uujJouFmvOdnkVfeAJAgeOb3kKmUM9kjelv1cwH2ScZg==}
@@ -7626,6 +7641,24 @@ packages:
       react:
         optional: true
 
+  zustand@5.0.0:
+    resolution: {integrity: sha512-LE+VcmbartOPM+auOjCCLQOsQ05zUTp8RkgwRzefUk+2jISdMMFnxvyTjA4YNWr5ZGXYbVsEMZosttuxUBkojQ==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      immer: '>=9.0.6'
+      react: '>=18.0.0'
+      use-sync-external-store: '>=1.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+      use-sync-external-store:
+        optional: true
+
 snapshots:
 
   '@adraffy/ens-normalize@1.10.0': {}
@@ -7640,6 +7673,8 @@ snapshots:
   '@ark/schema@0.3.3':
     dependencies:
       '@ark/util': 0.2.2
+
+  '@ark/util@0.18.0': {}
 
   '@ark/util@0.2.2': {}
 
@@ -17582,3 +17617,9 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.2.22
       react: 18.3.1
+
+  zustand@5.0.0(@types/react@18.2.22)(react@18.3.1)(use-sync-external-store@1.2.2(react@18.3.1)):
+    optionalDependencies:
+      '@types/react': 18.2.22
+      react: 18.3.1
+      use-sync-external-store: 1.2.2(react@18.3.1)
