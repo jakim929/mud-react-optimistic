@@ -14,6 +14,7 @@ import {
   getValueSchema,
   KeySchema,
 } from '@latticexyz/protocol-parser/internal'
+import { devConsole } from './devConsole'
 
 type MutableRawRecord = {
   -readonly [K in keyof RawRecord]: RawRecord[K]
@@ -50,6 +51,7 @@ export const applyLogsToSingleRecord = <TTable extends Table>({
   table: TTable
   logs: StoreEventsLog[] // assumes these are all for the same record
 }): TableRecord<TTable> | null => {
+  devConsole.log('applyLogsToSingleRecord', { existingRawRecord, table, logs })
   const id = getId(logs[0].args)
   const tableId = logs[0].args.tableId
   const keyTuple = logs[0].args.keyTuple
