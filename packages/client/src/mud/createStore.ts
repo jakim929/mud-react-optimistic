@@ -13,7 +13,7 @@ type TableRecords<table extends Table> = {
 
 export type ZustandState<tables extends Tables> = {
   // optimistic state
-  readonly pendingLogs: Map<Hex, StoreEventsLog>
+  readonly pendingLogs: Map<string, StoreEventsLog>
   // cannonical state
   readonly syncProgress: {
     readonly step: SyncStep;
@@ -76,7 +76,24 @@ export function createStore<tables extends Tables>(opts: CreateStoreOptions<tabl
       // TODO: update encodeKey to use more recent types
       const keyTuple = encodeKey(getSchemaTypes(getKeySchema(table)) as never, key as never);
       const id = getId({ tableId: table.tableId, keyTuple });
-      return get().records[id] as unknown as TableRecord<table> | undefined;
+      return get().pendingLogs.get(id) ?? get().records[id] as unknown as TableRecord<table> | undefined;
+    },
+    getRecordOptimistic: <table extends Table>(table: table, key: TableRecord<table>["key"]): TableRecord<table> | undefined => {
+      const keyTuple = encodeKey(getSchemaTypes(getKeySchema(table)) as never, key as never);
+      const recordId = getId({ tableId: table.tableId, keyTuple })
+        ;[...get().pendingLogs.entries()].find(([]))
+
+
+      const id = getId({ tableId: table.tableId, keyTuple });
+      const log = get().pendingLogs.get(id)
+      if (log) {
+        // const logAsRecord: TableRecord<table> = 
+        if (log.eventName === ) {
+
+        }
+
+      }
+      return as unknown as TableRecord<table> | undefined;
     },
     getValue: <table extends Table>(
       table: table,
