@@ -11,6 +11,8 @@ import {
   Hex,
   ClientConfig,
   getContract,
+  createPublicClient,
+  Block,
 } from 'viem'
 import {
   createStorageAdapter,
@@ -27,7 +29,9 @@ import { transactionQueue, writeObserver } from '@latticexyz/common/actions'
 import { Subject, share } from 'rxjs'
 import { createMemoryClient } from 'tevm'
 import { createCommon } from 'tevm/common'
+import { Block as TevmBlock, BlockHeader } from 'tevm/block'
 import { syncToZustandOptimistic } from '../optimistic/syncToZustandOptimistic'
+import { convertViemBlockToTevmBlock } from './convertViemBlockToTevmBlock'
 
 /*
  * Import our MUD config, which includes strong types for
@@ -53,6 +57,8 @@ export async function setupNetwork() {
     address: storePrecompileAddress as Hex,
   })
 
+  const chainCommon = createCommon(networkConfig.chain)
+
   const memoryClient = createMemoryClient({
     fork: {
       transport: http(networkConfig.chain.rpcUrls.default.http[0])({
@@ -66,31 +72,7 @@ export async function setupNetwork() {
     // loggingLevel: 'debug',
   })
 
-  const publicClient = memoryClient
-
-  const vm = await memoryClient.tevm.getVm()
-  memoryClient.tevm.on('message', (data) => {
-    console.log('message', data)
-  })
-  vm.evm.events.on('step', (data, next) => {
-    console.log('data', data)
-    next?.()
-  })
-
-  // const testCallResult = await memoryClient.tevmCall({
-  //   to: storePrecompileAddress,
-  //   data: '0x12312',
-  //   throwOnFail: false,
-  //   createTrace: true,
-  // })
-
-  // console.log('testCallResult', testCallResult)
-
-  // Setup auto mining
-  // setInterval(async () => {
-  //   const result = await memoryClient.tevmMine()
-  //   console.log('mined block', result)
-  // }, 1000)
+  // const publicClient = memoryClient
 
   /*
    * Create a viem public (read only) client
@@ -102,7 +84,7 @@ export async function setupNetwork() {
     pollingInterval: 1000,
   } as const satisfies ClientConfig
 
-  // const publicClient = createPublicClient(clientOptions)
+  const publicClient = createPublicClient(clientOptions)
 
   /*
    * Create an observable for contract writes that we can
@@ -152,9 +134,14 @@ export async function setupNetwork() {
     publicClient: publicClient,
     startBlock: BigInt(networkConfig.initialBlockNumber),
   })
-  // const optimisticStore = createStore({ tables })
 
-  // const storageAdapter = createStorageAdapter({ store: useStore })
+  latestBlock$.subscribe(async (block) => {
+    console.log('latestBlock', block)
+    // console.log(convertViemBlockToTevmBlock(block, chainCommon))
+    // const vm = await memoryClient.tevm.getVm()
+
+    // await vm.blockchain.putBlock(ethjsBlock)
+  })
 
   return {
     tables,

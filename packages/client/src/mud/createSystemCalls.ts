@@ -14,6 +14,7 @@ import {
   parseEventLogs,
   toBytes,
 } from 'viem'
+import { v4 } from 'uuid'
 import { SetupNetworkResult } from './setupNetwork'
 import { storeEventsAbi } from '@latticexyz/store'
 
@@ -25,7 +26,7 @@ const storePrecompileAddress =
 
 const precompileStateOverrideSet = {
   // app__task system
-  ['0x19Be2cfAF9D0673546d67BdCb5565e0EE0feBe78']: {
+  ['0xCf04B0E16D674e29043e861F971C5A1c04FeDc44']: {
     state: {
       [STORAGE_SLOT]: storePrecompileAddress,
     },
@@ -66,20 +67,16 @@ export function createSystemCalls(
     waitForTransaction,
 
     memoryClient,
-    // storageAdapter,
   }: SetupNetworkResult,
 ) {
-  const applyToStore = async (logs: Log[]) => {
+  const applyToStore = async (marker: string, logs: Log[]) => {
     const parsedLogs = parseEventLogs({
       abi: storeEventsAbi,
       // @ts-ignore
       logs,
     })
 
-    useStore.getState().addPendingLogs(parsedLogs)
-
-    // @ts-ignore
-    // await storageAdapter({ logs: parsedLogs })
+    useStore.getState().addPendingLogs(marker, parsedLogs)
   }
 
   const addTask = async (label: string) => {
@@ -95,7 +92,13 @@ export function createSystemCalls(
 
     console.log('add tevmCallResult', tevmCallResult)
 
-    await applyToStore((tevmCallResult.logs as Log[]) ?? [])
+    const marker = v4()
+    await applyToStore(marker, (tevmCallResult.logs as Log[]) ?? [])
+    ;(async () => {
+      const tx = await worldContract.write.app__addTask([label])
+      await waitForTransaction(tx)
+      useStore.getState().removePendingLogsForMarker(marker)
+    })()
   }
 
   const toggleTask = async (id: Hex) => {
@@ -103,13 +106,14 @@ export function createSystemCalls(
       (useStore.getState().getValueOptimistic(tables.Tasks, { id })
         ?.completedAt ?? 0n) > 0n
 
+    const fnName = isComplete ? 'app__resetTask' : 'app__completeTask'
     const functionData = encodeFunctionData({
       abi: worldContract.abi,
-      functionName: isComplete ? 'app__resetTask' : 'app__completeTask',
+      functionName: fnName,
       args: [id],
     })
 
-    console.log('action', isComplete ? 'app__resetTask' : 'app__completeTask')
+    console.log('action', fnName)
 
     // TODO: figure out: state override seems to persist between calls
     // delete when https://github.com/evmts/tevm-monorepo/pull/1481 lands
@@ -122,7 +126,15 @@ export function createSystemCalls(
 
     console.log('toggle tevmCallResult', tevmCallResult)
 
-    await applyToStore((tevmCallResult.logs as Log[]) ?? [])
+    const marker = v4()
+    await applyToStore(marker, (tevmCallResult.logs as Log[]) ?? [])
+    ;(async () => {
+      const tx = isComplete
+        ? await worldContract.write.app__resetTask([id])
+        : await worldContract.write.app__completeTask([id])
+      await waitForTransaction(tx)
+      useStore.getState().removePendingLogsForMarker(marker)
+    })()
   }
 
   const deleteTask = async (id: Hex) => {
@@ -137,12 +149,43 @@ export function createSystemCalls(
     })
     console.log('delete tevmCallResult', tevmCallResult)
 
-    await applyToStore((tevmCallResult.logs as Log[]) ?? [])
+    const marker = v4()
+    await applyToStore(marker, (tevmCallResult.logs as Log[]) ?? [])
+    ;(async () => {
+      const tx = await worldContract.write.app__deleteTask([id])
+      await waitForTransaction(tx)
+      useStore.getState().removePendingLogsForMarker(marker)
+    })()
+  }
+
+  const appendToTaskDescription = async (id: Hex, text: String) => {
+    const tevmCallResult = await memoryClient.tevmContract({
+      to: worldContract.address,
+      abi: worldContract.abi,
+      functionName: 'app__appendToTaskDescription',
+      args: [id, text],
+      from: walletClient.account.address,
+      throwOnFail: false,
+      stateOverrideSet: precompileStateOverrideSet,
+    })
+    console.log('append tevmCallResult', tevmCallResult)
+
+    const marker = v4()
+    await applyToStore(marker, (tevmCallResult.logs as Log[]) ?? [])
+    ;(async () => {
+      const tx = await worldContract.write.app__appendToTaskDescription([
+        id,
+        text,
+      ])
+      await waitForTransaction(tx)
+      useStore.getState().removePendingLogsForMarker(marker)
+    })()
   }
 
   return {
     addTask,
     toggleTask,
     deleteTask,
+    appendToTaskDescription,
   }
 }

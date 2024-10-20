@@ -15,11 +15,17 @@ type TableRecords<table extends Table> = {
   readonly [id: string]: TableRecord<table>
 }
 
+// Ideally txHash should be the marker, but that is hard to pre-calc without an RPC call
+type StoreEventWithMarker = {
+  marker: string
+  log: StoreEventsLog
+}
+
 // TODO: split this into distinct stores and combine (https://docs.pmnd.rs/zustand/guides/typescript#slices-pattern)?
 
 export type ZustandStateOptimistic<tables extends Tables> = {
   // optimistic state
-  readonly pendingLogs: Map<string, StoreEventsLog[]>
+  readonly pendingLogs: Map<string, StoreEventWithMarker[]>
   // cannonical state
   readonly syncProgress: {
     readonly step: SyncStep
@@ -62,8 +68,8 @@ export type ZustandStateOptimistic<tables extends Tables> = {
     table: table,
     key: TableRecord<table>['key'],
   ) => TableRecord<table> | undefined
-  readonly addPendingLogs: (logs: StoreEventsLog[]) => void
-  readonly removePendingLogsForTxHash: (hash: Hex) => void
+  readonly addPendingLogs: (marker: string, logs: StoreEventsLog[]) => void
+  readonly removePendingLogsForMarker: (marker: string) => void
 }
 
 export type ZustandStoreOptimistic<tables extends Tables> = UseBoundStore<
@@ -112,7 +118,7 @@ export function createStoreOptimistic<tables extends Tables>(
           const updatedRecord = applyLogsToSingleRecord<table>({
             existingRawRecord: existingRecord,
             table,
-            logs,
+            logs: logs.map((x) => x.log),
           })
 
           return [id, updatedRecord]
@@ -167,7 +173,7 @@ export function createStoreOptimistic<tables extends Tables>(
         applyLogsToSingleRecord<table>({
           existingRawRecord,
           table,
-          logs,
+          logs: logs.map((x) => x.log),
         })
       return (
         tableRecord ??
@@ -188,28 +194,28 @@ export function createStoreOptimistic<tables extends Tables>(
       return get().getRecordOptimistic(table, key)?.value
     },
 
-    addPendingLogs: (logs: StoreEventsLog[]) => {
+    addPendingLogs: (marker: string, logs: StoreEventsLog[]) => {
       const pendingLogs = get().pendingLogs
       logs.forEach((log) => {
         const id = getId(log.args)
         if (pendingLogs.has(id)) {
-          pendingLogs.get(id)!.push(log)
+          pendingLogs.get(id)!.push({ marker, log })
         } else {
-          pendingLogs.set(id, [log])
+          pendingLogs.set(id, [{ marker, log }])
         }
       })
       set({ pendingLogs })
     },
 
-    removePendingLogsForTxHash: (hash: Hex) => {
+    removePendingLogsForMarker: (markerToRemove: string) => {
       const pendingLogs = get().pendingLogs
       const updatedLogs = new Map(
         Array.from(pendingLogs.entries())
-          .map(([key, logs]) => {
+          .map(([key, logsWithMarker]) => {
             return [
               key,
-              logs.filter((log) => log.transactionHash !== hash),
-            ] as [string, StoreEventsLog[]]
+              logsWithMarker.filter(({ marker }) => marker !== markerToRemove),
+            ] as [string, StoreEventWithMarker[]]
           })
           .filter(([, logs]) => logs.length > 0),
       )

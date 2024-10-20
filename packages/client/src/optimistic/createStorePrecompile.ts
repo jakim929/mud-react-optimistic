@@ -5,8 +5,15 @@ import { Address, hexToBytes } from 'viem'
 import { IStoreAbi } from './IStoreAbi'
 import { FieldLayout } from './FieldLayout'
 import { StoreCore } from './StoreCore'
+import { ZustandStoreOptimistic } from './createStoreOptimistic'
 
-export const createStorePrecompile = ({ address }: { address: Address }) => {
+export const createStorePrecompile = ({
+  address,
+  useStore,
+}: {
+  address: Address
+  useStore: ZustandStoreOptimistic
+}) => {
   const contract = createContract({
     abi: IStoreAbi,
     address: address,

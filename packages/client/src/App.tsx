@@ -5,7 +5,7 @@ const styleUnset = { all: "unset" } as const;
 export const App = () => {
   const {
     network: { tables, useStore },
-    systemCalls: { addTask, toggleTask, deleteTask },
+    systemCalls: { addTask, toggleTask, deleteTask, appendToTaskDescription },
   } = useMUD();
 
   const tasks = useStore((state) => {
@@ -59,6 +59,24 @@ export const App = () => {
                   }}
                 >
                   &times;
+                </button>
+              </td>
+              <td align="right">
+                <button
+                  type="button"
+                  title="Add emoji"
+                  onClick={async (event) => {
+          
+                    const button = event.currentTarget;
+                    button.disabled = true;
+                    try {
+                      await appendToTaskDescription(task.key.id, "🚀");
+                    } finally {
+                      button.disabled = false;
+                    }
+                  }}
+                >
+                  Add emoji
                 </button>
               </td>
             </tr>
