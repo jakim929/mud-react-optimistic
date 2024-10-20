@@ -15,6 +15,7 @@ import {
   hexToBytes,
   Transaction,
   serializeTransaction,
+  toHex,
 } from 'viem'
 import {
   createStorageAdapter,
@@ -31,9 +32,8 @@ import { transactionQueue, writeObserver } from '@latticexyz/common/actions'
 import { Subject, share } from 'rxjs'
 import { createMemoryClient } from 'tevm'
 import { createCommon } from 'tevm/common'
-import { Block as TevmBlock, BlockHeader } from 'tevm/block'
+import { Block as TevmBlock } from 'tevm/block'
 import { syncToZustandOptimistic } from '../optimistic/syncToZustandOptimistic'
-import { convertViemBlockToTevmBlock } from './convertViemBlockToTevmBlock'
 
 /*
  * Import our MUD config, which includes strong types for
@@ -62,6 +62,7 @@ export async function setupNetwork() {
 
   const chainCommon = createCommon(networkConfig.chain)
 
+  console.log('chainCommon', chainCommon)
   const memoryClient = createMemoryClient({
     fork: {
       transport: http(networkConfig.chain.rpcUrls.default.http[0])({
@@ -140,31 +141,47 @@ export async function setupNetwork() {
 
   latestBlock$.subscribe(async (block) => {
     const vm = await memoryClient.tevm.getVm()
-    await vm.blockchain.putBlock(
-      TevmBlock.fromBlockData({
-        transactions: block.transactions.map(tx => {
-          return TransactionFactory.fromSerializedData(hexToBytes(serializeTransaction(tx as Transaction)), { common: chainCommon.ethjsCommon })
-        }),
+    console.log('new block', block.hash, block.number, block)
+
+    const newTevmBlock = TevmBlock.fromBlockData(
+      {
+        transactions: [], // Transactions returned in latestBlock doesn't include full tx payload
         header: {
+          parentHash: hexToBytes(block.parentHash, { size: 32 }),
+          uncleHash: hexToBytes(block.sha3Uncles, { size: 32 }),
+          coinbase: hexToBytes(block.miner, { size: 20 }),
+          stateRoot: hexToBytes(block.stateRoot, { size: 32 }),
+          transactionsTrie: hexToBytes(block.transactionsRoot, { size: 32 }),
+          receiptTrie: hexToBytes(block.receiptsRoot, { size: 32 }),
+          logsBloom: hexToBytes(block.logsBloom as Hex, { size: 256 }),
+          difficulty: block.difficulty as bigint,
           number: block.number as bigint,
-          parentHash: block.parentHash,
+          gasLimit: block.gasLimit as bigint,
+          gasUsed: block.gasUsed as bigint,
           timestamp: BigInt(block.timestamp),
-          nonce: block.nonce as Hex,
-          difficulty: block.difficulty,
-          gasLimit: block.gasLimit,
-          gasUsed: block.gasUsed,
-          extraData: block.extraData,
+          extraData: hexToBytes(block.extraData),
+          mixHash: hexToBytes(block.mixHash, { size: 32 }),
+          nonce: hexToBytes(block.nonce as Hex, { size: 8 }),
           baseFeePerGas: block.baseFeePerGas as bigint,
-          mixHash: block.mixHash,
-          stateRoot: block.stateRoot,
           blobGasUsed: block.blobGasUsed,
           excessBlobGas: block.excessBlobGas,
-          uncleHash: block.sha3Uncles,
-        }
-      }, {
+          parentBeaconBlockRoot: undefined,
+          withdrawalsRoot: undefined,
+        },
+      },
+      {
         common: chainCommon,
-      })
+        freeze: false,
+      },
     )
+
+    // Hack to make the block hash match the block hash from the forked chain
+    // Tevm doesn't know which EIP / hardforks are activated on the remote chain
+    // so we need to manually set the hash here
+    newTevmBlock.hash = () => hexToBytes(block.hash!)
+    newTevmBlock.header.hash = () => hexToBytes(block.hash!)
+
+    await vm.blockchain.putBlock(newTevmBlock)
   })
 
   return {
