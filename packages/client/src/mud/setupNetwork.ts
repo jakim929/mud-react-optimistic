@@ -12,7 +12,9 @@ import {
   ClientConfig,
   getContract,
   createPublicClient,
-  Block,
+  hexToBytes,
+  Transaction,
+  serializeTransaction,
 } from 'viem'
 import {
   createStorageAdapter,
@@ -43,6 +45,7 @@ import { convertViemBlockToTevmBlock } from './convertViemBlockToTevmBlock'
  */
 import mudConfig from 'contracts/mud.config'
 import { createStorePrecompile } from '../optimistic/createStorePrecompile'
+import { TransactionFactory } from 'tevm/tx'
 // import { createStore } from './createStore'
 
 export type SetupNetworkResult = Awaited<ReturnType<typeof setupNetwork>>
@@ -136,11 +139,32 @@ export async function setupNetwork() {
   })
 
   latestBlock$.subscribe(async (block) => {
-    console.log('latestBlock', block)
-    // console.log(convertViemBlockToTevmBlock(block, chainCommon))
-    // const vm = await memoryClient.tevm.getVm()
-
-    // await vm.blockchain.putBlock(ethjsBlock)
+    const vm = await memoryClient.tevm.getVm()
+    await vm.blockchain.putBlock(
+      TevmBlock.fromBlockData({
+        transactions: block.transactions.map(tx => {
+          return TransactionFactory.fromSerializedData(hexToBytes(serializeTransaction(tx as Transaction)), { common: chainCommon.ethjsCommon })
+        }),
+        header: {
+          number: block.number as bigint,
+          parentHash: block.parentHash,
+          timestamp: BigInt(block.timestamp),
+          nonce: block.nonce as Hex,
+          difficulty: block.difficulty,
+          gasLimit: block.gasLimit,
+          gasUsed: block.gasUsed,
+          extraData: block.extraData,
+          baseFeePerGas: block.baseFeePerGas as bigint,
+          mixHash: block.mixHash,
+          stateRoot: block.stateRoot,
+          blobGasUsed: block.blobGasUsed,
+          excessBlobGas: block.excessBlobGas,
+          uncleHash: block.sha3Uncles,
+        }
+      }, {
+        common: chainCommon,
+      })
+    )
   })
 
   return {
